@@ -1,4 +1,4 @@
-import time, math, json, numpy as np
+import time, math, json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any
@@ -9,33 +9,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# 렌더 클라우드 하드웨어 에러 방지용 순수 파이썬 빌트인 경량 특징량 엔진
 class SafeTCRInferenceCore:
     def __init__(self):
         self.blacklist = ["CASSLAPGATNEKLFF", "CASSYVGNTGELFF"]
-        self.amino_acids = "ACDEFGHIKLMNPQRSTVWY"
-        self.aa_to_idx = {aa: i for i, aa in enumerate(self.amino_acids)}
-        self.blosum62 = np.array([
-            [ 4,  0, -2, -1, -2,  0, -2, -1, -1, -1, -1, -2, -1, -1, -1,  1,  0,  0, -3, -2],[ 0,  9, -3, -4, -2, -3, -3, -1, -3, -1, -1, -3, -3, -3, -3, -1, -1, -1, -2, -2],
-            [-2, -3,  6,  2, -3, -1, -1, -3, -1, -4, -3,  1, -1,  0, -2,  0, -1, -3, -4, -3],[-1, -4,  2,  5, -3, -2,  0, -3,  1, -3, -2,  0, -1,  2,  0,  0, -1, -2, -3, -2],
-            [-2, -2, -3, -3,  6, -3, -1,  0, -3,  0,  0, -3, -4, -3, -3, -2, -2, -1,  1,  3],[ 0, -3, -1, -2, -3,  6, -2, -4, -2, -4, -3,  0, -2, -2, -2,  0, -2, -3, -2, -3],
-            [-2, -3, -1,  0, -1, -2,  8, -3, -1, -3, -2,  1, -2,  0,  0, -1, -2, -2, -2,  2],[-1, -1, -3, -3,  0, -4, -3,  4, -3,  2,  1, -3, -3, -3, -3, -2, -1,  3, -3, -1],
-            [-1, -3, -1,  1, -3, -2, -1, -3,  5, -2, -1,  0, -1,  1,  2,  0, -1, -2, -3, -2],[-1, -1, -4, -3,  0, -4, -3,  2, -2,  4,  2, -3, -3, -2, -2, -2, -1,  1, -2, -1],
-            [-1, -1, -3, -2,  0, -3, -2,  1, -1,  2,  5, -2, -2,  0, -1, -1, -1,  1, -1, -1],[-2, -3,  1,  0, -3,  0,  1, -3,  0, -3, -2,  6, -2,  0,  0,  1,  0, -3, -4, -2],
-            [-1, -3, -1, -1, -4, -2, -2, -3, -1, -3, -2, -2,  7, -1, -2, -1, -1, -2, -4, -3],[-1, -3,  0,  2, -3, -2,  0, -3,  1, -2,  0,  0, -1,  5,  1,  0, -1, -2, -2, -1],
-            [-1, -3, -2,  0, -3, -2,  0, -3,  2, -2, -1,  0, -2,  1,  5, -1, -1, -3, -3, -2],[ 1, -1,  0,  0, -2,  0, -1, -2,  0, -2, -1,  1, -1,  0, -1,  4,  1, -2, -3, -2],
-            [ 0, -1, -1, -1, -2, -2, -2, -1, -1, -1, -1,  0, -1, -1, -1,  1,  4,  0, -2, -2],[ 0, -1, -3, -2, -1, -3, -2,  3, -2,  1,  1, -3, -2, -2, -3, -2,  0,  4, -3, -1],
-            [-3, -2, -4, -3,  1, -2, -2, -3, -3, -2, -1, -4, -4, -2, -3, -3, -2, -3, 11,  2],[-2, -2, -3, -2,  3, -3,  2, -1, -2, -1, -1, -2, -3, -1, -2, -2, -2, -1,  2,  7]
-        ])
 
     def score_similarity(self, s1: str, s2: str) -> float:
+        # 가벼운 문자열 일치 매핑으로 렌더 OS 락 원천 방어
         min_len = min(len(s1), len(s2))
-        score, max_score = 0, 0
-        for i in range(min_len):
-            if s1[i] in self.aa_to_idx and s2[i] in self.aa_to_idx:
-                idx1, idx2 = self.aa_to_idx[s1[i]], self.aa_to_idx[s2[i]]
-                score += self.blosum62[idx1, idx2]
-                max_score += self.blosum62[idx1, idx1]
-        return score / max_score if max_score > 0 else 0.0
+        if min_len == 0: return 0.0
+        match_count = sum(1 for i in range(min_len) if s1[i] == s2[i])
+        return match_count / min_len
 
 ai_engine = SafeTCRInferenceCore()
 
@@ -65,10 +49,12 @@ async def process_bulk_screening(payload: BulkRequest):
         if not pep.isalpha() or len(pep) < 8: continue
         mock_tcr = "CASSLAPGATNEKLFF" if "G" in pep else "CASSQDRTGENEKLFF"
         mock_energy = -8.7 if "G" in pep else -7.4
+
         max_sim = 0.0
-        for black_tcr in ai_engine.autoimmune_tcr_blacklist:
+        for black_tcr in ai_engine.blacklist:
             sim = ai_engine.score_similarity(mock_tcr, black_tcr)
             if sim > max_sim: max_sim = sim
+
         verdict = "APPROVED_FOR_CLINICAL" if max_sim < 0.65 else "REJECTED_HAZARDOUS"
         response_results.append({
             "peptide": pep, "hla": query.hla, "designed_tcr_cdr3": mock_tcr,
