@@ -10,7 +10,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# 렌더 클라우드 하드웨어 에러 방지용 순수 파이썬 빌트인 경량 특징량 엔진
 class SafeTCRInferenceCore:
     def __init__(self):
         self.blacklist = ["CASSLAPGATNEKLFF", "CASSYVGNTGELFF"]
@@ -23,38 +22,32 @@ class SafeTCRInferenceCore:
 
 ai_engine = SafeTCRInferenceCore()
 
-# 제약회사 데이터 규격화 및 입출력 스키마 정의 (Pydantic)
 class SingleQuery(BaseModel):
     peptide: str
     hla: str
 
 class BulkRequest(BaseModel):
-    license_tier: str                       # Starter, Standard Pro, Enterprise Bulk
-    billing_cycle: str                      # monthly, yearly (교안 기반 월간/연간 분기 추가)
+    license_tier: str                       
+    billing_cycle: str                      
     account_active_seats_count: int         
     current_month_cumulative_usage: int    
     queries: List[SingleQuery]              
 
-# 🔌 [CORE API] 제약사 컴퓨터 통신용 고속 연산 및 복합 과금 엔드포인트
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload: BulkRequest):
     start_perf = time.perf_counter()
     tier = payload.license_tier
     cycle = payload.billing_cycle.lower().strip()
 
-    # 교안 기반 제공 한도 설정
     limits = {"Starter": 1500, "Standard Pro": 30000, "Enterprise Bulk": 1000000}
-
-    # [교안 핵심 반영] 월간(Monthly) 및 연간(Yearly - 20% 할인 앵커링) 기본 구독료 스펙 밸런싱
     base_fees_monthly = {"Starter": 39000, "Standard Pro": 390000, "Enterprise Bulk": 8900000}
-    base_fees_yearly_discounted = {"Starter": 31200, "Standard Pro": 312000, "Enterprise Bulk": 7120000} # 20% Off
+    base_fees_yearly_discounted = {"Starter": 31200, "Standard Pro": 312000, "Enterprise Bulk": 7120000} 
 
     if tier not in limits:
         raise HTTPException(status_code=400, detail="Invalid tier")
     if cycle not in ["monthly", "yearly"]:
-        raise HTTPException(status_code=400, detail="Invalid billing cycle. Choose 'monthly' or 'yearly'.")
+        raise HTTPException(status_code=400, detail="Invalid billing cycle.")
 
-    # 연간 결제 선택 여부에 따른 동적 기본료 변수 바인딩
     active_base_fee = base_fees_yearly_discounted[tier] if cycle == "yearly" else base_fees_monthly[tier]
 
     response_results = []
@@ -63,7 +56,6 @@ async def process_bulk_screening(payload: BulkRequest):
         if not pep.isalpha() or len(pep) < 8: continue
         mock_tcr = "CASSLAPGATNEKLFF" if "G" in pep else "CASSQDRTGENEKLFF"
         mock_energy = -8.7 if "G" in pep else -7.4
-
         max_sim = 0.0
         for black_tcr in ai_engine.blacklist:
             sim = ai_engine.score_similarity(mock_tcr, black_tcr)
@@ -78,16 +70,13 @@ async def process_bulk_screening(payload: BulkRequest):
     incoming_count = len(response_results)
     total_usage = payload.current_month_cumulative_usage + incoming_count
 
-    # 사용자당(Per-Seat) 추가 과금 수식
     extra_seats = max(0, payload.account_active_seats_count - 3)
     seat_fee = extra_seats * 500000
 
-    # [교안 핵심 반영] 사용량 기반 종량제(Usage-Based Overage) 과금 수식
     overage_queries = max(0, total_usage - limits[tier])
     billable_overage = min(incoming_count, overage_queries)
-    usage_fee = billable_overage * 0.1  # 50만 건 초과 한도량에 대해 건당 0.1원 실시간 청구
+    usage_fee = billable_overage * 0.1  
 
-    # 최종 계층형 과금 구조 결합 계산
     total_invoice = active_base_fee + seat_fee + usage_fee
 
     return {
@@ -100,15 +89,13 @@ async def process_bulk_screening(payload: BulkRequest):
             "pricing_breakdown": {
                 "base_subscription_fee_krw": f"₩ {active_base_fee:,}",
                 "per_seat_surcharge_krw": f"₩ {seat_fee:,}",
-                "usage_based_overage_charge_krw": f"₩ {usage_fee:,.0f} 원 (초과 {billable_overage}건 집계)"
+                "usage_based_overage_charge_krw": f"₩ {usage_fee:,.0f} 원"
             },
-            "total_monthly_billing_invoice_krw": f"₩ {total_invoice:,.0f} 원",
-            "value_delivered": f"실험실(Wet-lab) 대비 비용 약 ₩ {incoming_count * 150000:,} 원 절감 완료"
+            "total_monthly_billing_invoice_krw": f"₩ {total_invoice:,.0f} 원"
         },
         "data": response_results
     }
 
-# 미니멀리즘 다국어 3단계 가격 테이블 및 커스텀 포털 레이아웃 HTML 정의
 pricing_web_page = """<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -138,14 +125,14 @@ pricing_web_page = """<!DOCTYPE html>
 <body>
     <div class="header">
         <h1>ImmuneNexus™ Subscription Options</h1>
-        <p>교안 2단계 매핑 완료: 무료 시연, 월간/연간 구독, 종량제 혼합형 빌링 아키텍처</p>
+        <p>무료 시연, 월간/연간 구독, 종량제 혼합형 빌링 아키텍처</p>
     </div>
     <div class="pricing-container">
         <div class="price-card">
             <div class="tier-name">Starter (개인/학술용)</div>
-            <div class="tier-price">₩ 39,000 <span>/ 월 (연간 결제 시 ₩31,200)</span></div>
+            <div class="tier-price">₩ 39,000 <span>/ 월</span></div>
             <ul class="features-list">
-                <li>월 1,500건 예측 제공 (무료 티어 30건 초과분)</li>
+                <li>월 1,500건 예측 제공</li>
                 <li>기초 GNN 3D 구조 분석</li>
                 <li>개인 단일 계정 전용 할당</li>
             </ul>
@@ -153,7 +140,7 @@ pricing_web_page = """<!DOCTYPE html>
         </div>
         <div class="price-card featured">
             <div class="tier-name">Standard Pro (바이오텍)</div>
-            <div class="tier-price">₩ 390,000 <span>/ 월 (연간 결제 시 ₩312,000)</span></div>
+            <div class="tier-price">₩ 390,000 <span>/ 월</span></div>
             <ul class="features-list">
                 <li>월 30,000건 고속 스크리닝</li>
                 <li>BLOSUM62 독성 필터 개방</li>
@@ -163,7 +150,7 @@ pricing_web_page = """<!DOCTYPE html>
         </div>
         <div class="price-card">
             <div class="tier-name">Enterprise Bulk (대형 제약사)</div>
-            <div class="tier-price">₩ 8,900,000 <span>/ 월 (연간 결제 시 ₩7,120,000)</span></div>
+            <div class="tier-price">₩ 8,900,000 <span>/ 월</span></div>
             <ul class="features-list">
                 <li>월 1,000,000건 계산 한도 보장</li>
                 <li>한도 초과 시 쿼리당 0.1원 종량제 실시간 적용</li>
@@ -452,9 +439,6 @@ async def get_pricing_page():
 </html>
 """
 
-if __name__ == "__main__":
-    import uvicorn
-    config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="warning")
-    server = uvicorn.Server(config)
-    import asyncio
-    await server.serve()
+# [★오류 전면 해결 지점] 
+# 클라우드 서버 환경(main:app 구조)에서 구문 충돌을 일으키던 
+# uvicorn 호출 방식과 await 코드를 완벽히 제거하여 순수 파일 기동 규격으로 락인합니다.
