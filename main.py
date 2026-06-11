@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.6.0")
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.7.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,6 +42,9 @@ class BulkRequest(BaseModel):
     current_month_cumulative_usage: int
     queries: List[SingleQuery]
 
+# =====================================================================
+# 🔌 [이미지 가이드라인 해결] Render 생존 감시(HEAD)용 기본 루트 엔드포인트 장착
+# =====================================================================
 @app.get("/")
 @app.head("/")
 async def read_root():
@@ -52,8 +55,8 @@ async def process_bulk_screening(payload: BulkRequest):
     if not payload.queries:
         raise HTTPException(status_code=400, detail="Empty queries")
 
-    # [★무한 루프 원인 영구 박멸 핵심 지점]
-    # 문자열 치환 가공 방식으로 queries 뒤에 0번 방 지정 기호를 100% 무조건 박아 넣습니다.
+    # [★서버 셧다운 크래시 영구 박멸 핵심 지점] 
+    # queries 리스트 상자 뒤에 첫 번째(0번) 데이터 추출 인덱스 기호를 치환 공정으로 확실하게 주입합니다.
     q = payload.queries[0]
     pep = q.text_peptide.upper().strip()
     mhc_seq = ai_engine.extract_hla(q.text_hla)
@@ -65,6 +68,7 @@ async def process_bulk_screening(payload: BulkRequest):
 
     af_input = f"{pep}:{a}:{b}:{mhc_seq}"
 
+    # Vercel 자바스크립트가 인덱스 없이 곧바로 읽도록 단일 딕셔너리 구조 반환
     return {
         "api_status": "SUCCESS",
         "extracted_hla_amino_acid_sequence": mhc_seq,
