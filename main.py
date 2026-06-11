@@ -5,9 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.4.5")
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.4.6")
 
-# CORS 전면 개방 패치로 Vercel과의 통신 차단벽 완벽 해제
+# [이미지 2, 3번 보정] 브라우저 간 차단 장벽(CORS) 전면 완전 허용 해제
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,8 +15,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-PREMIUM_MODE_ACTIVE = False
 
 class SafeTCRInferenceCore:
     def __init__(self):
@@ -45,12 +43,23 @@ class BulkRequest(BaseModel):
     current_month_cumulative_usage: int
     queries: List[SingleQuery]
 
+# =====================================================================
+# 🔌 [이미지 1번 해결 지점] Render의 HEAD 생존 신호 검증용 기본 루트 핸들러 장착
+# =====================================================================
+@app.get("/")
+@app.head("/")
+async def read_root():
+    return {"status": "HEALTHY", "message": "ImmuneNexus Enterprise Core API Server Node Active"}
+
+# =====================================================================
+# 🔌 [이미지 3번 해결 지점] Vercel 프론트엔드가 쏘아 보낼 진짜 API 주소 매핑 결속
+# =====================================================================
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload: BulkRequest):
     if not payload.queries:
         raise HTTPException(status_code=400, detail="Empty queries")
 
-    # [★핵심 디버깅 해결 지점] queries 리스트에서 0번 인덱스[0] 객체를 명확히 지정하여 500 내부 에러 원천 차단
+    # 전달받은 첫 번째 배열 상자에서 데이터 알맹이를 안전하게 추출 지정
     q = payload.queries[0]
     pep = q.text_peptide.upper().strip()
     mhc_seq = ai_engine.extract_hla(q.text_hla)
@@ -62,7 +71,7 @@ async def process_bulk_screening(payload: BulkRequest):
 
     af_input = f"{pep}:{a}:{b}:{mhc_seq}"
 
-    # Vercel 자바스크립트가 인덱스 없이 다이렉트로 매핑을 읽도록 단일 딕셔너리 구조로 반환
+    # 자바스크립트가 즉시 변수를 파싱하여 읽어내도록 정형 단일 객체 리턴 밸브 고정
     return {
         "api_status": "SUCCESS",
         "extracted_hla_amino_acid_sequence": mhc_seq,
@@ -76,4 +85,4 @@ async def process_bulk_screening(payload: BulkRequest):
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def get_pricing_page():
-    return "<html><body>ImmuneNexus Active.</body></html>"
+    return "<html><body>ImmuneNexus Central Node Active.</body></html>"
