@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus™ Enterprise AI API Server", version="1.3.3")
+app = FastAPI(title="ImmuneNexus™ Enterprise AI API Server", version="1.3.4")
 PREMIUM_MODE_ACTIVE = False
 
 class SafeTCRInferenceCore:
@@ -46,7 +46,7 @@ async def process_bulk_screening(payload: BulkRequest):
         if "G" in pep or "C" in pep:
             a, b, d, e = "CAVREDGNYKYVF", "CASSLAPGATNEKLFF", "CAVREDGNYKYVF/CASSLAPGATNEKLFF", -9.2
         else:
-            a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CASSQDRTGENEKLFF", -8.6
+            a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CAMSGEGDYKLSF", -8.6
 
         af_input = f"{pep}:{a}:{b}:{mhc_seq}"
         results.append({
@@ -79,16 +79,14 @@ pricing_web_page = """<!DOCTYPE html>
         .features-summary ul li { margin-bottom: 12px; display: flex; align-items: center; }
         .features-summary ul li::before { content: "✓ "; font-weight: bold; margin-right: 10px; color: #111; }
         .btn { display: inline-block; width: 100%; background: #111; color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; }
-
-        /* [보강] 법적 분쟁을 예방하는 흑백 미니멀 디자인 면책 공지 영역 */
         .disclaimer-box { max-width: 600px; width: 100%; border-top: 1px solid #e5e5e5; padding-top: 25px; text-align: left; font-size: 0.82rem; color: #777; line-height: 1.5; }
-        .disclaimer-box strong { color: #333; display: block; margin-bottom: 50px; }
+        .disclaimer-box strong { color: #333; display: block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
     <div class="hero-section">
         <h1>ImmuneNexus™ Central Data Hub</h1>
-        <p>글로벌 오픈 베타 인프라가 인터넷 세상에 정식 개방되었습니다.<br>전 세계 모든 독립 연구소, 대학원생, 바이오 스타트업 빌더를 위한 면역 정보학 플랫폼</p>
+        <p>글로벌 오픈 베타 인프라가 인터넷 세상에 정식 개방되었습니다.<br>독립 연구원, 대학원생, 바이오 스타트업 빌더를 위한 최적의 면역 정보학 플랫폼</p>
     </div>
 
     <div class="beta-container">
@@ -108,7 +106,6 @@ pricing_web_page = """<!DOCTYPE html>
         <button class="btn" onclick="alert('ImmuneNexus™ 베타 프로토콜 가동. 주소창 끝의 /pricing을 지우고 /docs를 붙여 접속하세요.')">오픈 베타 즉시 가동하기</button>
     </div>
 
-    <!-- [보강] 1인 창업자를 완벽히 에워싸서 보호하는 글로벌 규격 법적 면책 고지 -->
     <div class="disclaimer-box">
         <strong>LEGAL DISCLAIMER / 법적 면책 고지</strong>
         • 본 플랫폼(ImmuneNexus)은 오픈 베타 연구 보조용 서비스이며, 인공지능 예측 모델의 특성상 도출된 결합 에너지 및 면역 서열의 생물학적 활성, 실험적 재현성, 그리고 실제 임상 시험 성과에 대해 어떠한 명시적·묵시적 보증도 하지 않습니다.<br>
