@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="2.6.0")
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="2.8.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,9 +42,10 @@ class BulkRequest(BaseModel):
     current_month_cumulative_usage: int
     queries: List[SingleQuery]
 
+# Render 생존 감시 및 헬스체크 응답 핸들러 일제 탑재
 @app.get("/")
 @app.head("/")
-async def read_root(): return {"status": "ok", "message": "ImmuneNexus API Node Server Active"}
+async def read_root(): return {"status": "ok", "message": "ImmuneNexus API is running"}
 
 @app.get("/health")
 async def health(): return {"status": "healthy"}
@@ -53,17 +54,13 @@ async def health(): return {"status": "healthy"}
 async def process_bulk_screening(payload: BulkRequest):
     if not payload.queries: raise HTTPException(status_code=400, detail="Empty queries")
 
-    # [★무한 루프 원인 영구 박멸 핵심 지점]
-    # 문자열 강제 replace 방식으로 queries 뒤에 0번 방 지정 기호 [0]을 한 자의 유실도 없이 완벽히 기입합니다.
+    # queries 리스트에서 첫 번째 원소 객체를 명확하게 추출하여 파이썬 500 에러 차단
     q = payload.queries[0]
     pep = q.text_peptide.upper().strip()
     mhc_seq = ai_engine.extract_hla(q.text_hla)
 
-    if "G" in pep or "C" in pep:
-        a, b, d, e = "CAVREDGNYKYVF", "CASSLAPGATNEKLFF", "CAVREDGNYKYVF/CASSLAPGATNEKLFF", -9.2
-    else:
-        a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CASSQDRTGENEKLFF", -8.6
-
+    if "G" in pep or "C" in pep: a, b, d, e = "CAVREDGNYKYVF", "CASSLAPGATNEKLFF", "CAVREDGNYKYVF/CASSLAPGATNEKLFF", -9.2
+    else: a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CASSQDRTGENEKLFF", -8.6
     af_input = f"{pep}:{a}:{b}:{mhc_seq}"
 
     return {
@@ -78,5 +75,9 @@ async def process_bulk_screening(payload: BulkRequest):
     }
 
 @app.get("/pricing", response_class=HTMLResponse)
-async def get_pricing_page():
-    return "<html><body>ImmuneNexus Central Node Active.</body></html>"
+async def get_pricing_page(): return "<html><body>ImmuneNexus Connected.</body></html>"
+
+# [★교안 가이드라인 100% 장착 지점] Render 포트 10000 바인딩을 위한 메인 진입 가동선 빌드
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000, reload=False)
