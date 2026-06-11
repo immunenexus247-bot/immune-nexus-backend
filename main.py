@@ -1,11 +1,15 @@
-import time, math, json
+import time, math, json, logging
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.7.0")
+# [이미지 7번 가이드 반영] 연산 실패 경로 정밀 추적을 위한 디버그(DEBUG) 수준 로깅 시스템 마운트
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("ImmuneNexusLogger")
+
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.8.5")
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,22 +46,24 @@ class BulkRequest(BaseModel):
     current_month_cumulative_usage: int
     queries: List[SingleQuery]
 
-# =====================================================================
-# 🔌 [이미지 가이드라인 해결] Render 생존 감시(HEAD)용 기본 루트 엔드포인트 장착
-# =====================================================================
+# Render 생존 감시 감지 노드 200 OK 무오류 통과선
 @app.get("/")
 @app.head("/")
 async def read_root():
-    return {"status": "HEALTHY", "message": "ImmuneNexus API Node Server Active"}
+    logger.debug("HEAD/GET 생존 모니터링 신호 수신")
+    return {"status": "HEALTHY", "log_level": "DEBUG_ACTIVE"}
 
+# Vercel 프론트엔드 실시간 결속 핵심 API 엔드포인트
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload: BulkRequest):
+    logger.debug(f"인바운드 데이터 연산 요청 진입: {payload.queries}")
     if not payload.queries:
         raise HTTPException(status_code=400, detail="Empty queries")
 
-    # [★서버 셧다운 크래시 영구 박멸 핵심 지점] 
-    # queries 리스트 상자 뒤에 첫 번째(0번) 데이터 추출 인덱스 기호를 치환 공정으로 확실하게 주입합니다.
-    q = payload.queries[0]
+    # [★이미지 6번 가이드 반영: 임시 허용 모드 언락 가동]
+    # 오픈 베타 무료 배포 기간에는 라이선스 인증 미들웨어 제한을 100% 우회 프리패스 처리합니다.
+
+    q = payload.queries
     pep = q.text_peptide.upper().strip()
     mhc_seq = ai_engine.extract_hla(q.text_hla)
 
@@ -68,7 +74,7 @@ async def process_bulk_screening(payload: BulkRequest):
 
     af_input = f"{pep}:{a}:{b}:{mhc_seq}"
 
-    # Vercel 자바스크립트가 인덱스 없이 곧바로 읽도록 단일 딕셔너리 구조 반환
+    logger.debug("단백질 구조 시뮬레이션 자체 연산 성공. 1:1 JSON 객체 반환 개시")
     return {
         "api_status": "SUCCESS",
         "extracted_hla_amino_acid_sequence": mhc_seq,
@@ -82,4 +88,4 @@ async def process_bulk_screening(payload: BulkRequest):
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def get_pricing_page():
-    return "<html><body>ImmuneNexus Central Node Active.</body></html>"
+    return "<html><body>ImmuneNexus DEBUG Server Node Active.</body></html>"
