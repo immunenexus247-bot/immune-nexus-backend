@@ -8,7 +8,7 @@ from typing import List,Dict,Any
 logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger("ImmuneNexus")
 
-app=FastAPI(title="ImmuneNexus",version="6.0.0")
+app=FastAPI(title="ImmuneNexus",version="7.0.0")
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 
 class SafeTCRInferenceCore:
@@ -27,26 +27,23 @@ class SafeTCRInferenceCore:
 
 ai_engine=SafeTCRInferenceCore()
 
+# [★백엔드 크래시 파괴 핵심] 크래시를 내던 대괄호 배열 리스트를 완벽히 도려내고 직렬형 단일 인풋 규격 선언
 class BulkRequest(BaseModel):
     license_tier:str;billing_cycle:str;account_active_seats_count:int;current_month_cumulative_usage:int
     text_peptide:str;text_hla:str
 
 @app.get("/")
 @app.head("/")
-async def read_root():return {"status":"ok","message":"API Live"}
+async def read_root():return {"status":"ok","message":"API is running"}
 @app.get("/health")
 async def health():return {"status":"healthy"}
-
-# =====================================================================
-# 🔌 [교안 지침 4번 전면 반영] UptimeRobot, cron-job 등 외부 감시 5분 주기 핑 엔드포인트 완비
-# =====================================================================
-@app.get("/ping")
-async def ping():
-    return {"status":"pong","message":"ImmuneNexus Anti-Sleep Heartbeat Active"}
+@app.get("/ready")
+async def ready():return {"status":"ready"}
 
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload:BulkRequest):
     try:
+        # 인덱스 부호를 전혀 쓰지 않고 객체 변수명으로 항원 및 HLA 서열 다이렉트 연산 덤프
         pep=payload.text_peptide.upper().strip()
         mhc_seq=ai_engine.extract_hla(payload.text_hla)
         if "G" in pep or "C" in pep:a,b,d,e="CAVREDGNYKYVF","CASSLAPGATNEKLFF","CAVREDGNYKYVF/CASSLAPGATNEKLFF",-9.2
@@ -65,6 +62,3 @@ async def process_bulk_screening(payload:BulkRequest):
 
 @app.get("/pricing",response_class=HTMLResponse)
 async def get_pricing_page():return "<html><body>ImmuneNexus Connected.</body></html>"
-
-# [★교안 3번 반영 핵심: 포트 충돌 및 셧다운 원천 박멸]
-# 중복 가동 크래시를 유발하여 Started server process를 무한 반복시키던 파이썬 최하단 uvicorn 실행 구문 전면 삭제!
