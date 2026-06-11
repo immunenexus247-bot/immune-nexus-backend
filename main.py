@@ -5,8 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="3.5.0")
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="3.6.0")
 
+# 브라우저 간 외부 도메인 접근 허용을 위한 CORS 차단벽 전면 개방
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,7 +32,7 @@ class SafeTCRInferenceCore:
 
 ai_engine = SafeTCRInferenceCore()
 
-# [★프로세스 다운 격파 핵심 1] 크래시를 유발하던 대괄호 배열 리스트를 지우고 단일 객체 인풋 구조체로 선언
+# [★프로세스 리부팅 크래시 격파 핵심 1] 크래시를 유발하던 대괄호 배열 리스트를 지우고 단일 객체 인풋 구조체로 선언
 class BulkRequest(BaseModel):
     license_tier: str
     billing_cycle: str
@@ -49,7 +50,7 @@ async def health(): return {"status": "healthy"}
 
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload: BulkRequest):
-    # 인덱스 부호를 쓰지 않고 객체 변수명으로 항원 및 HLA 서열 다이렉트 접근 덤프
+    # 인덱스 부호를 전혀 쓰지 않고 객체 변수명으로 항원 및 HLA 서열 다이렉트 접근 덤프
     pep = payload.text_peptide.upper().strip()
     mhc_seq = ai_engine.extract_hla(payload.text_hla)
 
@@ -59,7 +60,7 @@ async def process_bulk_screening(payload: BulkRequest):
         a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CASSQDRTGENEKLFF", -8.6
     af_input = f"{pep}:{a}:{b}:{mhc_seq}"
 
-    # [★프로세스 다운 격파 핵심 2] 일대일 직렬 패킷 딕셔너리로 다이렉트 변수 리턴
+    # [★프로세스 리부팅 크래시 격파 핵심 2] 일대일 직렬 패킷 딕셔너리로 다이렉트 변수 리턴
     return {
         "api_status": "SUCCESS",
         "data": {
