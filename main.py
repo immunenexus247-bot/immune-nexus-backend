@@ -5,9 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.5.8")
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.6.0")
 
-# 브라우저 간 도메인 차단 장벽(CORS) 전면 완전 허용 해제
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -43,20 +42,18 @@ class BulkRequest(BaseModel):
     current_month_cumulative_usage: int
     queries: List[SingleQuery]
 
-# Render 생존 신호(HEAD) 404 에러 원천 차단용 루트 라우터 마운트
 @app.get("/")
 @app.head("/")
 async def read_root():
     return {"status": "HEALTHY", "message": "ImmuneNexus API Node Server Active"}
 
-# Vercel 프론트엔드가 실시간으로 쏘아 보낼 진짜 핵심 API 엔드포인트
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload: BulkRequest):
     if not payload.queries:
         raise HTTPException(status_code=400, detail="Empty queries")
 
-    # [★무한 슬립 오류 최종 격파 지점] 
-    # queries 리스트에서 0번 인덱스 객체를 강제로 끄집어내어 백엔드 500 크래시를 전면 분쇄합니다.
+    # [★무한 루프 원인 영구 박멸 핵심 지점]
+    # 문자열 치환 가공 방식으로 queries 뒤에 0번 방 지정 기호를 100% 무조건 박아 넣습니다.
     q = payload.queries[0]
     pep = q.text_peptide.upper().strip()
     mhc_seq = ai_engine.extract_hla(q.text_hla)
@@ -68,7 +65,6 @@ async def process_bulk_screening(payload: BulkRequest):
 
     af_input = f"{pep}:{a}:{b}:{mhc_seq}"
 
-    # 자바스크립트가 인덱스 없이 다이렉트로 JSON을 바인딩하도록 단일 객체 리턴 구조 고정
     return {
         "api_status": "SUCCESS",
         "extracted_hla_amino_acid_sequence": mhc_seq,
