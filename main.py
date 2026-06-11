@@ -5,10 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.9.5")
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.9.9")
 
-# [★CORS 무한 루프 파괴 핵심 지점 1] 
-# 브라우저 보안 필터가 Vercel 주소를 차단하지 못하도록 모든 도메인, 헤더, 메서드를 전면 영구 허용
+# 브라우저 간 도메인 차단 필터를 완전히 우회 가동하는 CORS 미들웨어 적용
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,8 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# [★CORS 무한 루프 파괴 핵심 지점 2]
-# 브라우저가 실제 데이터를 쏘기 전 먼저 찔러보는 'OPTIONS' 예비 요청에 대해 무조건 승인(200 OK)을 반환하는 보안 우회 밸브 장착
+# 브라우저의 OPTIONS 사전 확인 요청에 무조건 통과 스탬프를 찍어주는 프리플라이트 우회 핸들러
 @app.options("/{path:path}")
 async def preflight_handler(path: str):
     return JSONResponse(
@@ -57,17 +55,28 @@ class BulkRequest(BaseModel):
     current_month_cumulative_usage: int
     queries: List[SingleQuery]
 
+# =====================================================================
+# 🔌 [교안 가이드라인 전면 반영] 루트 엔드포인트 및 /health, /ready 검증선 배치
+# =====================================================================
 @app.get("/")
 @app.head("/")
 async def read_root():
-    return {"status": "HEALTHY", "message": "ImmuneNexus CORS-Free Node Server Active"}
+    return {"status": "ok", "message": "ImmuneNexus API is running"}
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+@app.get("/ready")
+async def ready():
+    return {"status": "ready", "traffic_allowed": True}
 
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload: BulkRequest):
     if not payload.queries:
         raise HTTPException(status_code=400, detail="Empty queries")
 
-    # 리스트 내부 원소를 정확히 타겟팅하여 인덱스 누설 에러를 완벽 방지
+    # 0번 인덱스 리스트 추출 방식을 완벽 결속하여 파이썬 500 내부 에러 원천 차단
     q = payload.queries[0]
     pep = q.text_peptide.upper().strip()
     mhc_seq = ai_engine.extract_hla(q.text_hla)
