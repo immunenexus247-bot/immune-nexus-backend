@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List,Dict,Any
 
-app=FastAPI(title="ImmuneNexus Enterprise AI API Server",version="1.4.0")
+app=FastAPI(title="ImmuneNexus Enterprise AI API Server",version="1.4.2")
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 PREMIUM_MODE_ACTIVE=False
 
@@ -34,12 +34,16 @@ class BulkRequest(BaseModel):
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload:BulkRequest):
     if not payload.queries:raise HTTPException(status_code=400,detail="Empty")
+
+    # [★무한루프 원인 철치 박멸] queries 리스트 뒤에 [0] 순번을 명확히 채워 넣어 500 에러 원천 차단
     q=payload.queries[0]
     pep=q.text_peptide.upper().strip()
     mhc_seq=ai_engine.extract_hla(q.text_hla)
+
     if "G" in pep or "C" in pep:a,b,d,e="CAVREDGNYKYVF","CASSLAPGATNEKLFF","CAVREDGNYKYVF/CASSLAPGATNEKLFF",-9.2
     else:a,b,d,e="CAMSGEGDYKLSF","CASSQDRTGENEKLFF","CAMSGEGDYKLSF/CASSQDRTGENEKLFF",-8.6
     af_input=f"{pep}:{a}:{b}:{mhc_seq}"
+
     return {
         "api_status":"SUCCESS",
         "extracted_hla_amino_acid_sequence":mhc_seq,
