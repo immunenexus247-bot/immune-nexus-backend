@@ -8,10 +8,10 @@ from typing import List, Dict, Any
 app = FastAPI(
     title="ImmuneNexus Enterprise AI API Server",
     description="Production-grade backend engine with Freemium-to-Premium Launch Control Infrastructure.",
-    version="1.3.6"
+    version="1.3.7"
 )
 
-# [CORS 전면 개방] Vercel 홈페이지 화면과의 실시간 데이터 통신을 완벽하게 허용
+# [CORS 전면 허용] Vercel 외부 도메인에서 유입되는 실시간 데이터 통신 보안 완전 언락
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -54,7 +54,6 @@ async def process_bulk_screening(payload: BulkRequest):
     start_perf = time.perf_counter()
     results = []
 
-    # 웹 브라우저 단일 객체 바인딩을 위해 프론트엔드가 보낸 패킷 요소를 정확히 참조
     for q in payload.queries:
         pep = q.text_peptide.upper().strip()
         if not pep.isalpha() or len(pep) < 8: continue
@@ -66,7 +65,6 @@ async def process_bulk_screening(payload: BulkRequest):
             a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CASSQDRTGENEKLFF", -8.6
 
         af_input = f"{pep}:{a}:{b}:{mhc_seq}"
-
         results.append({
             "peptide_sequence": pep, 
             "input_hla_allele": q.text_hla, 
@@ -79,18 +77,22 @@ async def process_bulk_screening(payload: BulkRequest):
             "verdict": "APPROVED_FOR_CLINICAL"
         })
 
+    # [★무한 슬립 차단 디버깅 핵심 지점] 
+    # Vercel 프론트엔드가 인덱스 없이 다이렉트로 JSON을 즉시 변수 매핑하여 읽어내도록 
+    # data 필드 내부를 배열이 아닌 단일 객체(딕셔너리) 구조로 핫픽스 변경 완료!
+    final_output_data = results[0] if len(results) > 0 else {}
+
     return {
         "api_status": "SUCCESS", 
-        "launch_metadata": {"platform_billing_mode": "ImmuneNexus Free Open Beta Mode Active (전액 무료 제공 기간)"},
-        "performance_metrics": {"batch_processed_count": len(results), "latency_metrics": f"{round((time.perf_counter()-start_perf)*1000,2)} ms"},
-        "data": results[0] if len(results) > 0 else {} # Vercel 자바스크립트가 인덱스 없이 다이렉트 접근하도록 단일 객체 리턴 구조 패치
+        "launch_metadata": {"platform_billing_mode": "ImmuneNexus Free Open Beta Mode Active"},
+        "performance_metrics": {"batch_processed_count": len(results), "latency": f"{round((time.perf_counter()-start_perf)*1000,2)} ms"},
+        "immune_nexus_commercial_invoice": {"subscription_tier_selected": payload.license_tier, "total_billing_krw": "₩ 0 원"},
+        "data": final_output_data
     }
 
-# 무료 배포 전용 미니멀리즘 프론트 뷰 정보 테이블 바인딩
 pricing_web_page = """<html><body style="font-family:sans-serif;padding:40px;background:#fafafa;color:#111;">
-<h2>ImmuneNexus™ Central Node Active</h2><p>CORS Unlocked & Multi-Chain Data Alignment Node Running Successful.</p>
+<h2>ImmuneNexus™ Core Active</h2><p>Vercel Unified Data Engine Ready.</p>
 </body></html>"""
 
 @app.get("/pricing", response_class=HTMLResponse)
-async def get_pricing_page(): 
-    return pricing_web_page
+async def get_pricing_page(): return pricing_web_page
