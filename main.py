@@ -5,11 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List,Dict,Any
 
-# [교안 4번 반영] 상세 흐름 추적을 위한 로깅 레벨 DEBUG 격상 가동
 logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger("ImmuneNexus")
 
-app=FastAPI(title="ImmuneNexus",version="5.5.0")
+app=FastAPI(title="ImmuneNexus",version="6.0.0")
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 
 class SafeTCRInferenceCore:
@@ -28,29 +27,22 @@ class SafeTCRInferenceCore:
 
 ai_engine=SafeTCRInferenceCore()
 
-# 422 스키마 불일치 버그를 원천 차단하는 직렬화 단일 데이터 구조 정의
 class BulkRequest(BaseModel):
     license_tier:str;billing_cycle:str;account_active_seats_count:int;current_month_cumulative_usage:int
     text_peptide:str;text_hla:str
 
-# =====================================================================
-# 🔌 [교안 지침 1, 2번 전면 반영] 루트 및 health, ready, ping 엔드포인트 완비
-# =====================================================================
 @app.get("/")
 @app.head("/")
-async def read_root():
-    logger.debug("Render 생존 상태 감시 신호 수신")
-    return {"status":"ok","message":"ImmuneNexus API is running"}
-
+async def read_root():return {"status":"ok","message":"API Live"}
 @app.get("/health")
-async def health():
-    logger.debug("건강 상태 헬스체크 핑 차단 해제")
-    return {"status":"healthy"}
+async def health():return {"status":"healthy"}
 
-@app.get("/ready")
-async def ready():return {"status":"ready"}
+# =====================================================================
+# 🔌 [교안 지침 4번 전면 반영] UptimeRobot, cron-job 등 외부 감시 5분 주기 핑 엔드포인트 완비
+# =====================================================================
 @app.get("/ping")
-async def ping():return {"status":"pong"}
+async def ping():
+    return {"status":"pong","message":"ImmuneNexus Anti-Sleep Heartbeat Active"}
 
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload:BulkRequest):
@@ -69,8 +61,10 @@ async def process_bulk_screening(payload:BulkRequest):
             }
         }
     except Exception as err:
-        logger.error(f"서버 내부 예외 크래시 탐지: {str(err)}")
         raise HTTPException(status_code=500,detail=str(err))
 
 @app.get("/pricing",response_class=HTMLResponse)
 async def get_pricing_page():return "<html><body>ImmuneNexus Connected.</body></html>"
+
+# [★교안 3번 반영 핵심: 포트 충돌 및 셧다운 원천 박멸]
+# 중복 가동 크래시를 유발하여 Started server process를 무한 반복시키던 파이썬 최하단 uvicorn 실행 구문 전면 삭제!
