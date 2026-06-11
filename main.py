@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="3.6.0")
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="3.7.0")
 
 # 브라우저 간 외부 도메인 접근 허용을 위한 CORS 차단벽 전면 개방
 app.add_middleware(
