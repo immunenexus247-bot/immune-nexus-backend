@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="3.0.0")
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="3.5.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,7 +31,7 @@ class SafeTCRInferenceCore:
 
 ai_engine = SafeTCRInferenceCore()
 
-# [★무한 루프 전면 격파 핵심 1] 대괄호 배열 상자를 원천적으로 지우고 단일 객체 인풋 스키마로 선언
+# [★프로세스 다운 격파 핵심 1] 크래시를 유발하던 대괄호 배열 리스트를 지우고 단일 객체 인풋 구조체로 선언
 class BulkRequest(BaseModel):
     license_tier: str
     billing_cycle: str
@@ -49,7 +49,7 @@ async def health(): return {"status": "healthy"}
 
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload: BulkRequest):
-    # 인덱스 부호([0])를 전혀 쓰지 않고 객체 변수명으로 항원 및 HLA 서열 다이렉트 접근 덤프
+    # 인덱스 부호를 쓰지 않고 객체 변수명으로 항원 및 HLA 서열 다이렉트 접근 덤프
     pep = payload.text_peptide.upper().strip()
     mhc_seq = ai_engine.extract_hla(payload.text_hla)
 
@@ -59,14 +59,16 @@ async def process_bulk_screening(payload: BulkRequest):
         a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CASSQDRTGENEKLFF", -8.6
     af_input = f"{pep}:{a}:{b}:{mhc_seq}"
 
-    # [★무한 루프 전면 격파 핵심 2] 일대일 직렬 패킷 구조체로 무오류 다이렉트 리턴
+    # [★프로세스 다운 격파 핵심 2] 일대일 직렬 패킷 딕셔너리로 다이렉트 변수 리턴
     return {
         "api_status": "SUCCESS",
-        "extracted_hla_amino_acid_sequence": mhc_seq,
-        "full_tcr_input_for_docking": d,
-        "alphafold_multimer_ready_input": af_input,
-        "predicted_docking_energy_kcal_mol": e,
-        "verdict": "APPROVED_FOR_CLINICAL"
+        "data": {
+            "extracted_hla_amino_acid_sequence": mhc_seq,
+            "full_tcr_input_for_docking": d,
+            "alphafold_multimer_ready_input": af_input,
+            "predicted_docking_energy_kcal_mol": e,
+            "verdict": "APPROVED_FOR_CLINICAL"
+        }
     }
 
 if __name__ == "__main__":
