@@ -4,7 +4,9 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus™ Enterprise AI API Server", version="1.3.1")
+app = FastAPI(title="ImmuneNexus™ Enterprise AI API Server", version="1.3.2")
+
+# 유료화 밸브 완벽 해제 (False)
 PREMIUM_MODE_ACTIVE = False
 
 class SafeTCRInferenceCore:
@@ -37,21 +39,8 @@ class BulkRequest(BaseModel):
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload: BulkRequest):
     start_perf = time.perf_counter()
-    tier = payload.license_tier
-    cycle = payload.billing_cycle.lower().strip()
-    limits = {"Starter": 1500, "Standard Pro": 30000, "Enterprise Bulk": 1000000}
-    base_fees = {"Starter": 19000, "Standard Pro": 149000, "Enterprise Bulk": 1990000}
-
-    if not PREMIUM_MODE_ACTIVE:
-        fee, seat, usage, msg = 0, 0, 0, "ImmuneNexus Free Launch Beta Mode Active"
-    else:
-        fee = base_fees.get(tier, 149000)
-        seat = max(0, payload.account_active_seats_count - 3) * 300000
-        over = max(0, (payload.current_month_cumulative_usage + len(payload.queries)) - limits.get(tier, 30000))
-        usage = over * 0.05 if tier == "Enterprise Bulk" else 0.0
-        msg = f"Production mode active - {cycle} invoice tracking."
-
     results = []
+
     for q in payload.queries:
         pep = q.text_peptide.upper().strip()
         if not pep.isalpha() or len(pep) < 8: continue
@@ -69,15 +58,11 @@ async def process_bulk_screening(payload: BulkRequest):
             "alphafold_multimer_ready_input": af_input, "predicted_docking_energy_kcal_mol": e, "verdict": "APPROVED_FOR_CLINICAL"
         })
 
+    # 무료 오픈 베타 기간 전용 인보이스 및 성과 계약 찌꺼기 완벽 은닉 처리
     return {
-        "api_status": "SUCCESS", "launch_metadata": {"platform_billing_mode": msg},
-        "performance_metrics": {"batch_processed_count": len(results), "latency": f"{round((time.perf_counter()-start_perf)*1000,2)} ms"},
-        "immune_nexus_commercial_invoice": {"subscription_tier_selected": tier, "total_billing_krw": f"₩ {fee+seat+usage:,.0f} 원"},
-        "success_milestone_invoice_framework": {
-            "legal_clause_reference": "ImmuneNexus Standard B2B Milestone Terms Clause 1",
-            "milestone_IND_phase_1_bonus_krw": "₩ 50,000,000 원 (임상 1상 계획 승인 시 후불)",
-            "milestone_IND_phase_2_bonus_krw": "₩ 200,000,000 원 (임상 2상 진입 확정 시 후불)"
-        },
+        "api_status": "SUCCESS", 
+        "launch_metadata": {"platform_billing_mode": "ImmuneNexus Free Open Beta Mode Active (전액 무료 제공 기간)"},
+        "performance_metrics": {"batch_processed_count": len(results), "latency_metrics": f"{round((time.perf_counter()-start_perf)*1000,2)} ms"},
         "data": results
     }
 
@@ -86,52 +71,53 @@ pricing_web_page = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8"><title>ImmuneNexus™</title>
     <style>
-        body { font-family: sans-serif; background: #fafafa; color: #111; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { display: flex; gap: 24px; max-width: 1000px; width: 100%; justify-content: center; margin-bottom: 50px; }
-        .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 32px; width: 260px; display: flex; flex-direction: column; }
-        .featured { border: 2px solid #111; }
-        .name { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
-        .price { font-size: 1.8rem; font-weight: 800; margin-bottom: 20px; }
-        .list { list-style: none; padding:0; margin: 0 0 30px 0; font-size: 0.9rem; color: #444; }
-        .list li { margin-bottom: 12px; }
-        .btn { background: #111; color: #fff; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; text-align: center; }
-        .btn.sec { background: #fff; color: #111; border: 1px solid #e5e5e5; }
-        .portal { max-width: 850px; width: 100%; background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 30px; }
-        .grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
-        .p-card { border: 1px solid #e5e5e5; border-radius: 6px; padding: 15px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #fafafa; color: #111; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; }
+        .hero-section { text-align: center; max-width: 700px; margin-bottom: 40px; }
+        .hero-section h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.05em; margin-bottom: 15px; }
+        .hero-section p { font-size: 1.15rem; color: #555; line-height: 1.6; margin-bottom: 30px; }
+        .beta-container { max-width: 600px; width: 100%; background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 40px; box-sizing: border-box; text-align: center; box-shadow: 0 4px 30px rgba(0,0,0,0.02); }
+        .beta-badge { display: inline-block; background: #111; color: #fff; padding: 4px 12px; font-size: 0.8rem; font-weight: 700; border-radius: 20px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .features-summary { text-align: left; background: #f9f9f9; padding: 24px; border-radius: 8px; margin: 25px 0; border: 1px solid #f0f0f0; }
+        .features-summary h3 { margin-top: 0; font-size: 1.05rem; font-weight: 700; margin-bottom: 15px; color: #222; }
+        .features-summary ul { list-style: none; padding: 0; margin: 0; font-size: 0.95rem; color: #444; }
+        .features-summary ul li { margin-bottom: 12px; display: flex; align-items: center; }
+        .features-summary ul li::before { content: "✓ "; font-weight: bold; margin-right: 10px; color: #111; }
+        .btn { display: inline-block; width: 100%; background: #111; color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
+        .btn:hover { background: #333; }
+        .footer-note { font-size: 0.85rem; color: #888; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div style="text-align:center; margin-bottom:40px;">
-        <h1 style="font-size:2.3rem; font-weight:800; letter-spacing:-0.05em;">ImmuneNexus™ Central Data Hub</h1>
-        <p>글로벌 오픈 베타 - 대학생부터 대기업까지 가장 합리적인 AI 인프라 요금제</p>
+    <div class="hero-section">
+        <h1>ImmuneNexus™ Central Data Hub</h1>
+        <p>글로벌 오픈 베타 인프라가 인터넷 세상에 정식 개방되었습니다.<br>전 세계 모든 독립 연구소, 대학원생, 바이오 스타트업 빌더를 위한 면역 정보학 플랫폼</p>
     </div>
-    <div class="container">
-        <div class="card">
-            <div class="name">Starter (대학생/개인)</div>
-            <div class="price">₩ 19,000</div>
-            <ul class="list"><li>✓ 월 1,500건 구조 예측</li><li>✓ TCR Alpha/Beta 분리</li><li>✓ MHC 아미노산 자동 추출</li></ul>
-            <button class="btn sec" onclick="alert('Starter 가입')">플랜 가입</button>
+
+    <!-- 요금제 카드표와 마일스톤 조항을 완벽히 숨기고 오직 '오픈베타 즉시 가동 패널'만 미니멀하게 노출 -->
+    <div class="beta-container">
+        <div class="beta-badge">Global Open Beta</div>
+        <h2 style="margin:0 0 10px 0; font-size:1.6rem; font-weight:800;">한시적 전면 무료 개방 시스템</h2>
+        <p style="color:#666; margin:0; font-size:0.95rem;">오픈 베타 테스트 기간 동안 복잡한 결제 및 계약 허들 없이 무제한으로 AI 가속 엔진을 이용하실 수 있습니다.</p>
+
+        <div class="features-summary">
+            <h3>지금 즉시 개방된 프리미엄 AI 기능</h3>
+            <ul>
+                <li>TCR Alpha / Beta 독자 도메인 및 사슬 분리 매핑</li>
+                <li>MHC 대립유전자 아미노산 전체 서열 자동 추출 내장</li>
+                <li>AlphaFold3 및 최신 구조 AI 다이렉트 복사용 덤프 코드 지원</li>
+                <li>7ms 초고속 분자 스크리닝 파이프라인 무제한 액세스</li>
+            </ul>
         </div>
-        <div class="card featured">
-            <div class="name">Standard Pro (스타트업)</div>
-            <div class="price">₩ 149,000</div>
-            <ul class="list"><li>✓ 월 30,000건 스크리닝</li><li>✓ BLOSUM62 독성 분석</li><li>✓ 임상 IND 성과 마일스톤</li></ul>
-            <button class="btn" onclick="alert('Pro 활성화')">인기 플랜 활성화</button>
-        </div>
-        <div class="card">
-            <div class="name">Enterprise (빅파마)</div>
-            <div class="price">₩ 1,990,000</div>
-            <ul class="list"><li>✓ 월 1,000,000건 보장</li><li>✓ 초과 쿼리당 0.05원</li><li>✓ 독립형 전용 클라우드 VPC</li></ul>
-            <button class="btn sec" onclick="alert('Enterprise 도입 문의')">기업용 도입</button>
-        </div>
+
+        <button class="btn" onclick="startBeta()">오픈 베타 즉시 가동하기</button>
+        <div class="footer-note">본 오픈 베타 노드는 글로벌 공식 도메인 immunenexus.com 인프라와 실시간 동기화됩니다.</div>
     </div>
-    <div class="portal">
-        <h2 style="margin-top:0; font-size:1.2rem; border-bottom:1px solid #e5e5e5; padding-bottom:10px;">ImmuneNexus™ IP & Milestone Portal</h2>
-        <div class="grid">
-            <div class="p-card"><h3>임상 진입 마일스톤 청구 관리</h3><p>본 플랫폼을 활용해 발굴한 TCR 서열이 임상 1상/2상 시험 계획(IND) 승인 획득 시 성공 보수 인보이스를 안전하게 발행합니다.</p><button class="btn sec" onclick="alert('임상 성공 보수 청구 연동 인프라 가동')">마일스톤 청구 내역 확인</button></div>
-        </div>
-    </div>
+
+    <script>
+        function startBeta() { 
+            alert("ImmuneNexus™ 글로벌 오픈 베타 프로토콜이 성공적으로 호출되었습니다.\n\n[상단 주소창 맨 끝]의 /pricing을 지우고 [/docs]를 붙여 접속하시면, 사슬 꼬임 버그가 전면 교정된 고성능 AI API 명세서 대시보드가 전액 ₩0원 무료 모드로 즉시 실행됩니다."); 
+        }
+    </script>
 </body>
 </html>"""
 @app.get("/pricing", response_class=HTMLResponse)
