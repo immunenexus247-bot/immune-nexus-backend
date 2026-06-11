@@ -1,10 +1,25 @@
 import time, math, json
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.3.5")
+app = FastAPI(
+    title="ImmuneNexus Enterprise AI API Server",
+    description="Production-grade backend engine with Freemium-to-Premium Launch Control Infrastructure.",
+    version="1.3.6"
+)
+
+# [CORS 전면 개방] Vercel 홈페이지 화면과의 실시간 데이터 통신을 완벽하게 허용
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 PREMIUM_MODE_ACTIVE = False
 
 class SafeTCRInferenceCore:
@@ -38,6 +53,8 @@ class BulkRequest(BaseModel):
 async def process_bulk_screening(payload: BulkRequest):
     start_perf = time.perf_counter()
     results = []
+
+    # 웹 브라우저 단일 객체 바인딩을 위해 프론트엔드가 보낸 패킷 요소를 정확히 참조
     for q in payload.queries:
         pep = q.text_peptide.upper().strip()
         if not pep.isalpha() or len(pep) < 8: continue
@@ -49,75 +66,31 @@ async def process_bulk_screening(payload: BulkRequest):
             a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CASSQDRTGENEKLFF", -8.6
 
         af_input = f"{pep}:{a}:{b}:{mhc_seq}"
+
         results.append({
-            "peptide_sequence": pep, "input_hla_allele": q.text_hla, "extracted_hla_amino_acid_sequence": mhc_seq,
-            "tcr_alpha_chain_cdr3": a, "tcr_beta_chain_cdr3": b, "full_tcr_input_for_docking": d,
-            "alphafold_multimer_ready_input": af_input, "predicted_docking_energy_kcal_mol": e, "verdict": "APPROVED_FOR_CLINICAL"
+            "peptide_sequence": pep, 
+            "input_hla_allele": q.text_hla, 
+            "extracted_hla_amino_acid_sequence": mhc_seq,
+            "tcr_alpha_chain_cdr3": a, 
+            "tcr_beta_chain_cdr3": b, 
+            "full_tcr_input_for_docking": d,
+            "alphafold_multimer_ready_input": af_input, 
+            "predicted_docking_energy_kcal_mol": e, 
+            "verdict": "APPROVED_FOR_CLINICAL"
         })
 
     return {
         "api_status": "SUCCESS", 
         "launch_metadata": {"platform_billing_mode": "ImmuneNexus Free Open Beta Mode Active (전액 무료 제공 기간)"},
         "performance_metrics": {"batch_processed_count": len(results), "latency_metrics": f"{round((time.perf_counter()-start_perf)*1000,2)} ms"},
-        "data": results
+        "data": results[0] if len(results) > 0 else {} # Vercel 자바스크립트가 인덱스 없이 다이렉트 접근하도록 단일 객체 리턴 구조 패치
     }
 
-pricing_web_page = """<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8"><title>ImmuneNexus</title>
-    <style>
-        body { font-family: -apple-system, sans-serif; background: #fafafa; color: #111; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; }
-        .hero-section { text-align: center; max-width: 700px; margin-bottom: 40px; }
-        .hero-section h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.05em; margin-bottom: 15px; }
-        .hero-section p { font-size: 1.15rem; color: #555; line-height: 1.6; margin-bottom: 30px; }
-        .beta-container { max-width: 600px; width: 100%; background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 40px; box-sizing: border-box; text-align: center; box-shadow: 0 4px 30px rgba(0,0,0,0.02); margin-bottom: 40px; }
-        .beta-badge { display: inline-block; background: #111; color: #fff; padding: 4px 12px; font-size: 0.8rem; font-weight: 700; border-radius: 20px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
-        .features-summary { text-align: left; background: #f9f9f9; padding: 24px; border-radius: 8px; margin: 25px 0; border: 1px solid #f0f0f0; }
-        .features-summary h3 { margin-top: 0; font-size: 1.05rem; font-weight: 700; margin-bottom: 15px; color: #222; }
-        .features-summary ul { list-style: none; padding: 0; margin: 0; font-size: 0.95rem; color: #444; }
-        .features-summary ul li { margin-bottom: 12px; display: flex; align-items: center; }
-        .features-summary ul li::before { content: "✓ "; font-weight: bold; margin-right: 10px; color: #111; }
-        .btn { display: inline-block; width: 100%; background: #111; color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; }
-        .disclaimer-box { max-width: 600px; width: 100%; border-top: 1px solid #e5e5e5; padding-top: 25px; text-align: left; font-size: 0.82rem; color: #777; line-height: 1.5; }
-        .disclaimer-box strong { color: #333; display: block; margin-bottom: 5px; }
-    </style>
-</head>
-<body>
-    <div class="hero-section">
-        <h1>ImmuneNexus Central Data Hub</h1>
-        <p>글로벌 오픈 베타 인프라가 인터넷 세상에 정식 개방되었습니다.<br>독립 연구원, 대학원생, 바이오 스타트업 빌더를 위한 최적의 면역 정보학 플랫폼</p>
-    </div>
+# 무료 배포 전용 미니멀리즘 프론트 뷰 정보 테이블 바인딩
+pricing_web_page = """<html><body style="font-family:sans-serif;padding:40px;background:#fafafa;color:#111;">
+<h2>ImmuneNexus™ Central Node Active</h2><p>CORS Unlocked & Multi-Chain Data Alignment Node Running Successful.</p>
+</body></html>"""
 
-    <div class="beta-container">
-        <div class="beta-badge">Global Open Beta</div>
-        <h2 style="margin:0 0 10px 0; font-size:1.6rem; font-weight:800;">한시적 전면 무료 개방 시스템</h2>
-        <p style="color:#666; margin:0; font-size:0.95rem;">오픈 베타 테스트 기간 동안 복잡한 결제 및 계약 허들 없이 무제한으로 AI 가속 엔진을 이용하실 수 있습니다.</p>
-
-        <div class="features-summary">
-            <h3>지금 즉시 개방된 프리미엄 AI 기능</h3>
-            <ul>
-                <li>TCR Alpha / Beta 독자 도메인 및 사슬 분리 매핑</li>
-                <li>MHC 대립유전자 아미노산 전체 서열 자동 추출 내장</li>
-                <li>AlphaFold3 및 최신 구조 AI 다이렉트 복사용 덤프 코드 지원</li>
-                <li>데이터 유출 걱정 없는 독립형 클라우드 TLS 1.3 암호화 보안망</li>
-            </ul>
-        </div>
-        <button class="btn" onclick="startBeta()">오픈 베타 즉시 가동하기</button>
-    </div>
-
-    <div class="disclaimer-box">
-        <strong>LEGAL DISCLAIMER / 법적 면책 고지</strong>
-        • 본 플랫폼(ImmuneNexus)은 오픈 베타 연구 보조용 서비스이며, 인공지능 예측 모델의 특성상 도출된 결합 에너지 및 면역 서열의 생물학적 활성, 실험적 재현성, 그리고 실제 임상 시험 성과에 대해 어떠한 명시적·묵시적 보증도 하지 않습니다.<br>
-        • 본 인프라의 연산 데이터에 기반하여 발생하는 사용자의 오프라인 실험실 예산 지출, 물질 합성 결과, 혹은 제3자와의 특허 분쟁에 대해 개발자 및 소유자는 일체의 법적 손해배상 책임이나 귀책 의무를 지지 않음을 명시합니다.<br><br>
-        • <i>Notice: All inbound traffic is protected under end-to-end TLS encryption. Rate limiting active to prevent malicious DDoS exploitation.</i>
-    </div>
-    <script>
-        function startBeta() { 
-            alert("ImmuneNexus 글로벌 오픈 베타 프로토콜이 성공적으로 호출되었습니다.\n\n[상단 주소창 맨 끝]의 /pricing을 지우고 [/docs]를 붙여 접속하시면, 사슬 꼬임 버그가 전면 교정된 고성능 AI API 명세서 대시보드가 전액 ₩0원 무료 모드로 즉시 실행됩니다."); 
-        }
-    </script>
-</body>
-</html>"""
 @app.get("/pricing", response_class=HTMLResponse)
-async def get_pricing_page(): return pricing_web_page
+async def get_pricing_page(): 
+    return pricing_web_page
