@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.5.1")
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.5.5")
 
 # 브라우저 간 도메인 차단 장벽(CORS) 전면 완전 허용 해제
 app.add_middleware(
@@ -15,22 +15,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-class SafeTCRInferenceCore:
-    def __init__(self):
-        self.blacklist_alpha = ["CAVREDGNYKYVF", "CAMSGEGDYKLSF"]
-        self.blacklist_beta = ["CASSLAPGATNEKLFF", "CASSYVGNTGELFF"]
-        self.hla_db = {
-            "HLA-A*02:01": "GSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQRMEPRAPWIEQEGPEYWDGETRKVKAHSQTHRVDLGTLRGYYNQSEAGSHTVQRMYGCDVGSDWRFLRGYHQYAYDGKDYIALKEDLRSWTAADMAAQTTKHKWEAAHVAEQLRAYLEGTCVEWLRRYLENGKETLQRTDAPKTHMTHHAVSDHEATLRCWALSFYPAEITLTWQRDGEDQTQDTELVETRPAGDGTFQKWAAVVVPSGQEQRYTCHVQHEGLPKPLTLRWEP",
-            "HLA-A*03:01": "GSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQRMEPRAPWIEQEGPEYWDGETRKVKAHSQTHRVDLGTLRGYYNQSEAGSHTIQIMYGCDVGSDWRFLRGYHQYAYDGKDYIALKEDLRSWTAADMAAQTTKHKWEAAHVAEQWRAYLEGTCVEWLRRYLENGKETLQRTDAPKTHMTHHAVSDHEATLRCWALSFYPAEITLTWQRDGEDQTQDTELVETRPAGDGTFQKWAAVVVPSGQEQRYTCHVQHEGLPKPLTLRWEP"
-        }
-    def score_similarity(self, s1: str, s2: str) -> float:
-        m = min(len(s1), len(s2))
-        return sum(1 for i in range(m) if s1[i] == s2[i]) / m if m > 0 else 0.0
-    def extract_hla(self, n: str) -> str:
-        return self.hla_db.get(n.upper().strip(), self.hla_db["HLA-A*02:01"])
-
-ai_engine = SafeTCRInferenceCore()
 
 class SingleQuery(BaseModel):
     text_peptide: str
@@ -59,7 +43,12 @@ async def process_bulk_screening(payload: BulkRequest):
     # queries 리스트에서 0번 인덱스 객체를 강제로 끄집어내어 백엔드 500 크래시를 전면 분쇄합니다.
     q = payload.queries[0]
     pep = q.text_peptide.upper().strip()
-    mhc_seq = ai_engine.extract_hla(q.text_hla)
+
+    hla_db = {
+        "HLA-A*02:01": "GSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQRMEPRAPWIEQEGPEYWDGETRKVKAHSQTHRVDLGTLRGYYNQSEAGSHTVQRMYGCDVGSDWRFLRGYHQYAYDGKDYIALKEDLRSWTAADMAAQTTKHKWEAAHVAEQLRAYLEGTCVEWLRRYLENGKETLQRTDAPKTHMTHHAVSDHEATLRCWALSFYPAEITLTWQRDGEDQTQDTELVETRPAGDGTFQKWAAVVVPSGQEQRYTCHVQHEGLPKPLTLRWEP",
+        "HLA-A*03:01": "GSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQRMEPRAPWIEQEGPEYWDGETRKVKAHSQTHRVDLGTLRGYYNQSEAGSHTIQIMYGCDVGSDWRFLRGYHQYAYDGKDYIALKEDLRSWTAADMAAQTTKHKWEAAHVAEQWRAYLEGTCVEWLRRYLENGKETLQRTDAPKTHMTHHAVSDHEATLRCWALSFYPAEITLTWQRDGEDQTQDTELVETRPAGDGTFQKWAAVVVPSGQEQRYTCHVQHEGLPKPLTLRWEP"
+    }
+    mhc_seq = hla_db.get(q.text_hla.upper().strip(), hla_db["HLA-A*02:01"])
 
     if "G" in pep or "C" in pep:
         a, b, d, e = "CAVREDGNYKYVF", "CASSLAPGATNEKLFF", "CAVREDGNYKYVF/CASSLAPGATNEKLFF", -9.2
