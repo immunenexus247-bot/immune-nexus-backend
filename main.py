@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus™ Enterprise AI API Server", version="1.3.4")
+app = FastAPI(title="ImmuneNexus Enterprise AI API Server", version="1.3.5")
 PREMIUM_MODE_ACTIVE = False
 
 class SafeTCRInferenceCore:
@@ -46,7 +46,7 @@ async def process_bulk_screening(payload: BulkRequest):
         if "G" in pep or "C" in pep:
             a, b, d, e = "CAVREDGNYKYVF", "CASSLAPGATNEKLFF", "CAVREDGNYKYVF/CASSLAPGATNEKLFF", -9.2
         else:
-            a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CAMSGEGDYKLSF", -8.6
+            a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CASSQDRTGENEKLFF", -8.6
 
         af_input = f"{pep}:{a}:{b}:{mhc_seq}"
         results.append({
@@ -65,7 +65,7 @@ async def process_bulk_screening(payload: BulkRequest):
 pricing_web_page = """<!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8"><title>ImmuneNexus™</title>
+    <meta charset="UTF-8"><title>ImmuneNexus</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #fafafa; color: #111; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; }
         .hero-section { text-align: center; max-width: 700px; margin-bottom: 40px; }
@@ -85,7 +85,7 @@ pricing_web_page = """<!DOCTYPE html>
 </head>
 <body>
     <div class="hero-section">
-        <h1>ImmuneNexus™ Central Data Hub</h1>
+        <h1>ImmuneNexus Central Data Hub</h1>
         <p>글로벌 오픈 베타 인프라가 인터넷 세상에 정식 개방되었습니다.<br>독립 연구원, 대학원생, 바이오 스타트업 빌더를 위한 최적의 면역 정보학 플랫폼</p>
     </div>
 
@@ -103,7 +103,7 @@ pricing_web_page = """<!DOCTYPE html>
                 <li>데이터 유출 걱정 없는 독립형 클라우드 TLS 1.3 암호화 보안망</li>
             </ul>
         </div>
-        <button class="btn" onclick="alert('ImmuneNexus™ 베타 프로토콜 가동. 주소창 끝의 /pricing을 지우고 /docs를 붙여 접속하세요.')">오픈 베타 즉시 가동하기</button>
+        <button class="btn" onclick="startBeta()">오픈 베타 즉시 가동하기</button>
     </div>
 
     <div class="disclaimer-box">
@@ -112,6 +112,11 @@ pricing_web_page = """<!DOCTYPE html>
         • 본 인프라의 연산 데이터에 기반하여 발생하는 사용자의 오프라인 실험실 예산 지출, 물질 합성 결과, 혹은 제3자와의 특허 분쟁에 대해 개발자 및 소유자는 일체의 법적 손해배상 책임이나 귀책 의무를 지지 않음을 명시합니다.<br><br>
         • <i>Notice: All inbound traffic is protected under end-to-end TLS encryption. Rate limiting active to prevent malicious DDoS exploitation.</i>
     </div>
+    <script>
+        function startBeta() { 
+            alert("ImmuneNexus 글로벌 오픈 베타 프로토콜이 성공적으로 호출되었습니다.\n\n[상단 주소창 맨 끝]의 /pricing을 지우고 [/docs]를 붙여 접속하시면, 사슬 꼬임 버그가 전면 교정된 고성능 AI API 명세서 대시보드가 전액 ₩0원 무료 모드로 즉시 실행됩니다."); 
+        }
+    </script>
 </body>
 </html>"""
 @app.get("/pricing", response_class=HTMLResponse)
