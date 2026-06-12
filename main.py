@@ -8,9 +8,9 @@ from typing import List,Dict,Any
 logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger("ImmuneNexus")
 
-app=FastAPI(title="ImmuneNexus Enterprise AI API Server",version="15.0.0")
+app=FastAPI(title="ImmuneNexus Enterprise AI API Server",version="20.0.0")
 
-# [★통신 완전 성공 핵심 1] 버셀 실제 도메인 주소를 화이트리스트에 완벽하게 박아 넣어 보안 필터링 차단 해제!
+# [★통신 완전 가동 핵심 1] 인터넷 브라우저가 전송을 허용하도록 질문자님의 진짜 홈페이지 주소를 명확히 락인!
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -44,7 +44,7 @@ class BulkRequest(BaseModel):
 
 @app.get("/")
 @app.head("/")
-async def read_root():return {"status":"ok","message":"ImmuneNexus API Server Connected"}
+async def read_root():return {"status":"ok","message":"ImmuneNexus Master Node Online"}
 @app.get("/health")
 async def health():return {"status":"healthy"}
 @app.get("/ready")
