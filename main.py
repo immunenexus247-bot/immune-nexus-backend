@@ -8,7 +8,7 @@ from typing import List,Dict,Any
 logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger("ImmuneNexus")
 
-app=FastAPI(title="ImmuneNexus",version="8.0.0")
+app=FastAPI(title="ImmuneNexus",version="9.0.0")
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 
 class SafeTCRInferenceCore:
@@ -60,7 +60,7 @@ async def process_bulk_screening(payload:BulkRequest):
     except Exception as err:
         raise HTTPException(status_code=500,detail=str(err))
 
-# [★백엔드 통신 해제 핵심] Render가 무작위로 부여하는 가동 포트를 동적으로 바인딩하여 실행점 안착
+# [★포트 가이드라인 완벽 통과선] Render 인프라의 환경 변수 PORT 번호를 동적으로 획득하여 커널 결속 가동
 if __name__ == "__main__":
     import uvicorn
     port=int(os.environ.get("PORT",10000))
