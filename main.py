@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-app = FastAPI(title="ImmuneNexus API Server", version="11.0.0")
+app = FastAPI(title="ImmuneNexus AI API Server", version="12.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,7 +31,7 @@ class SafeTCRInferenceCore:
 
 ai_engine = SafeTCRInferenceCore()
 
-# [★런타임 크래시 셧다운 격파 핵심 1] 세미콜론이 없는 깨끗한 표준 줄바꿈 규격 데이터 검증 모델 구축
+# [★422 규격 차단 에러 박멸 지점 1] 세미콜론 노이즈를 100% 도려내어 변수 해석 공간 완전 정비
 class BulkRequest(BaseModel):
     license_tier: str
     billing_cycle: str
@@ -40,11 +40,10 @@ class BulkRequest(BaseModel):
     text_peptide: str
     text_hla: str
 
-# 렌더 내부 로드밸런서 생존 감시 게이트 200 OK 통과선 배치
 @app.get("/")
 @app.head("/")
 async def read_root(): 
-    return {"status": "ok", "message": "ImmuneNexus Core Engine Live"}
+    return {"status": "ok", "message": "ImmuneNexus Base Gateway Live"}
 
 @app.get("/health")
 async def health(): 
@@ -66,7 +65,6 @@ async def process_bulk_screening(payload: BulkRequest):
             a, b, d, e = "CAMSGEGDYKLSF", "CASSQDRTGENEKLFF", "CAMSGEGDYKLSF/CASSQDRTGENEKLFF", -8.6
         af_input = f"{pep}:{a}:{b}:{mhc_seq}"
 
-        # [★런타임 크래시 셧다운 격파 핵심 2] 프론트 자바스크립트 수신 구조와 1:1 결속되는 정형화 data 리턴
         return {
             "api_status": "SUCCESS",
             "data": {
