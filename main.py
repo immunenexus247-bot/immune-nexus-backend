@@ -8,7 +8,7 @@ from typing import List,Dict,Any
 logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger("ImmuneNexus")
 
-app=FastAPI(title="ImmuneNexus",version="9.0.0")
+app=FastAPI(title="ImmuneNexus",version="10.0.0")
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 
 class SafeTCRInferenceCore:
@@ -31,6 +31,7 @@ class BulkRequest(BaseModel):
     license_tier:str;billing_cycle:str;account_active_seats_count:int;current_month_cumulative_usage:int
     text_peptide:str;text_hla:str
 
+# [★무한 셧다운 크래시 격파 핵심 1] 렌더 내부 감시 및 프록시를 200 OK로 무조건 통과시키는 고정 엔드포인트 완비
 @app.get("/")
 @app.head("/")
 async def read_root():return {"status":"ok","message":"API is running"}
@@ -38,8 +39,6 @@ async def read_root():return {"status":"ok","message":"API is running"}
 async def health():return {"status":"healthy"}
 @app.get("/ready")
 async def ready():return {"status":"ready"}
-@app.get("/ping")
-async def ping():return {"status":"pong"}
 
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload:BulkRequest):
@@ -60,7 +59,6 @@ async def process_bulk_screening(payload:BulkRequest):
     except Exception as err:
         raise HTTPException(status_code=500,detail=str(err))
 
-# [★포트 가이드라인 완벽 통과선] Render 인프라의 환경 변수 PORT 번호를 동적으로 획득하여 커널 결속 가동
 if __name__ == "__main__":
     import uvicorn
     port=int(os.environ.get("PORT",10000))
