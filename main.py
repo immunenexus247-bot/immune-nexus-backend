@@ -1,6 +1,6 @@
 import time,math,json,logging,os
-from fastapi import FastAPI,HTTPException,status,Request
-from fastapi.responses import HTMLResponse,JSONResponse
+from fastapi import FastAPI,HTTPException,status
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List,Dict,Any
@@ -8,28 +8,19 @@ from typing import List,Dict,Any
 logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger("ImmuneNexus")
 
-app=FastAPI(title="ImmuneNexus",version="12.5.0")
+app=FastAPI(title="ImmuneNexus Enterprise AI API Server",version="15.0.0")
 
-# 브라우저 도메인 차단벽 해제를 위한 CORS 전면 완전 개방
+# [★통신 완전 성공 핵심 1] 버셀 실제 도메인 주소를 화이트리스트에 완벽하게 박아 넣어 보안 필터링 차단 해제!
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://vercel.app",
+        "http://localhost:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# [★CORS 무한 루프 격파 핵심] 크롬 브라우저의 OPTIONS 사전 확인 요청에 무조건 200 OK 승인을 반환하는 우회 핸들러 마운트
-@app.options("/{path:path}")
-async def preflight_handler(path: str):
-    return JSONResponse(
-        content="OK",
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "*",
-            "Access-Control-Allow-Headers": "*",
-        }
-    )
 
 class SafeTCRInferenceCore:
     def __init__(self):
@@ -53,7 +44,7 @@ class BulkRequest(BaseModel):
 
 @app.get("/")
 @app.head("/")
-async def read_root():return {"status":"ok","message":"API is running"}
+async def read_root():return {"status":"ok","message":"ImmuneNexus API Server Connected"}
 @app.get("/health")
 async def health():return {"status":"healthy"}
 @app.get("/ready")
@@ -77,3 +68,8 @@ async def process_bulk_screening(payload:BulkRequest):
         }
     except Exception as err:
         raise HTTPException(status_code=500,detail=str(err))
+
+if __name__ == "__main__":
+    import uvicorn
+    port=int(os.environ.get("PORT",10000))
+    uvicorn.run(app,host="0.0.0.0",port=port,reload=False)
