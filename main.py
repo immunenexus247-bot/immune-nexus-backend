@@ -1,4 +1,4 @@
-import time,math,json,logging
+import time,math,json,logging,os
 from fastapi import FastAPI,HTTPException,status
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +8,7 @@ from typing import List,Dict,Any
 logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger("ImmuneNexus")
 
-app=FastAPI(title="ImmuneNexus",version="7.0.0")
+app=FastAPI(title="ImmuneNexus",version="8.0.0")
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 
 class SafeTCRInferenceCore:
@@ -27,7 +27,6 @@ class SafeTCRInferenceCore:
 
 ai_engine=SafeTCRInferenceCore()
 
-# [★백엔드 크래시 파괴 핵심] 크래시를 내던 대괄호 배열 리스트를 완벽히 도려내고 직렬형 단일 인풋 규격 선언
 class BulkRequest(BaseModel):
     license_tier:str;billing_cycle:str;account_active_seats_count:int;current_month_cumulative_usage:int
     text_peptide:str;text_hla:str
@@ -39,11 +38,12 @@ async def read_root():return {"status":"ok","message":"API is running"}
 async def health():return {"status":"healthy"}
 @app.get("/ready")
 async def ready():return {"status":"ready"}
+@app.get("/ping")
+async def ping():return {"status":"pong"}
 
 @app.post("/api/v1/screening/bulk")
 async def process_bulk_screening(payload:BulkRequest):
     try:
-        # 인덱스 부호를 전혀 쓰지 않고 객체 변수명으로 항원 및 HLA 서열 다이렉트 연산 덤프
         pep=payload.text_peptide.upper().strip()
         mhc_seq=ai_engine.extract_hla(payload.text_hla)
         if "G" in pep or "C" in pep:a,b,d,e="CAVREDGNYKYVF","CASSLAPGATNEKLFF","CAVREDGNYKYVF/CASSLAPGATNEKLFF",-9.2
@@ -60,5 +60,8 @@ async def process_bulk_screening(payload:BulkRequest):
     except Exception as err:
         raise HTTPException(status_code=500,detail=str(err))
 
-@app.get("/pricing",response_class=HTMLResponse)
-async def get_pricing_page():return "<html><body>ImmuneNexus Connected.</body></html>"
+# [★백엔드 통신 해제 핵심] Render가 무작위로 부여하는 가동 포트를 동적으로 바인딩하여 실행점 안착
+if __name__ == "__main__":
+    import uvicorn
+    port=int(os.environ.get("PORT",10000))
+    uvicorn.run(app,host="0.0.0.0",port=port,reload=False)
