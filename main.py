@@ -1,6 +1,6 @@
-import time,math,json,logging
+import time,math,json,logging,os
 from fastapi import FastAPI,HTTPException,status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse,JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List,Dict,Any
@@ -8,9 +8,8 @@ from typing import List,Dict,Any
 logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger("ImmuneNexus")
 
-app=FastAPI(title="ImmuneNexus",version="35.0.0")
+app=FastAPI(title="ImmuneNexus Production AI Engine",version="60.0.0")
 
-# [★통신 성공 핵심 1] 브라우저 보안 필터를 무조건 프리패스시키는 강력한 와일드카드 전면 개방선 구축
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,6 +17,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# [★교안 지침 5번 반영 핵심] 크롬 브라우저의 프리플라이트 OPTIONS 요청을 직접 가로채 200 OK를 던지는 보정 밸브 마운트
+@app.options("/{path:path}")
+async def preflight_handler(path: str):
+    return JSONResponse(
+        content="OK",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 class SafeTCRInferenceCore:
     def __init__(self):
@@ -41,7 +52,7 @@ class BulkRequest(BaseModel):
 
 @app.get("/")
 @app.head("/")
-async def read_root():return {"status":"ok","message":"API is running"}
+async def read_root():return {"status":"ok","message":"API Live"}
 @app.get("/health")
 async def health():return {"status":"healthy"}
 @app.get("/ready")
